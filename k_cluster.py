@@ -46,20 +46,34 @@ class KCluster:
                 plt.ylabel(f'{y}')
                 plt.show()
 
-    def cluster(self, col1, col2):
+    def get_init_cent(self,X,K:int):
+        '''
+        Given Dataframe (N,2)
+        This finds a good starting points for the initial centroids, it is based on the statisitcal averages of the input
+        points. ie. if K=2 returns (25th percentile, 75th percentile), k= 3 returns (16.5, 50th, 63.3 )
+        given a data frame, and a number of clusters
+        :return: Dataframe: (2,2)
+        '''
+        N = self.data.shape[0]
+        percentile_list  = [x for x in range(0,N,int(N/(K+1)))]
+        return X.iloc[percentile_list[1:K+1]]
+
+
+    def cluster(self, col1, col2, K):
         # cluster data points from col1 and col2 and display them
         N = self.data.shape[0]
         #print(N)
-        K = 2 # number of clusters
         x = col1
         y = col2
         X = self.data[[x,y]]
-        centroids = (X.sample(n = K))  # need to do use weighted averages to compute not rand
-        #plt.scatter(X[x],X[y],c='black')
-        #plt.scatter(centroids[x],centroids[y],c='green')
-        #plt.xlabel(x)
-        #plt.ylabel(y)
-        #plt.show()
+        centroids = self.get_init_cent(X,K)
+
+        #centroids = (X.sample(n = K))  # need to do use weighted averages to compute not rand
+        plt.scatter(X[x],X[y],c='black')
+        plt.scatter(centroids[x],centroids[y],c='green')
+        plt.xlabel(x)
+        plt.ylabel(y)
+        plt.show()
 
         # Step 3 - Assign all the points to the closest cluster centroid
         # Step 4 - Recompute centroids of newly formed clusters
@@ -105,10 +119,15 @@ class KCluster:
                 print(diff.sum())
             centroids = X.groupby(["Cluster"]).mean()[[y,x]]
 
-        color=['black','red','cyan']
+        #calculate and return the inertia
+
+        #plot the final locations of the centroids
+
         for k in range(K):
+            color = np.random.rand(1,3)
+            print(color)
             data=X[X["Cluster"]==k+1]
-            plt.scatter(data[x],data[y],c=color[k])
+            plt.scatter(data[x],data[y],c=color)
         plt.scatter(centroids[x],centroids[y],c='green')
         plt.xlabel(x)
         plt.ylabel(y)
@@ -122,17 +141,23 @@ if __name__ == "__main__":
                'concave_points_SE', 'sym_SE', 'fractal_dim_SE', \
                'rad_worst', 'texture_worst', 'perim_worst', 'area_worst', 'smooth_worst', 'compact_worst',
                'concave_worst', 'concave_points_worst', 'sym_worst', 'fractal_dim_worst']
-    file = '/Users/claybro/Documents/Personal/CSCI499/wdbc.data'
+    file = '../wdbc.data'
 
     kc = KCluster(file, names_n)
     #convert M and R to 0,1
-    print(kc.data)
+    #print(kc.data)
     kc.data['outcome'] = kc.data['outcome'].map(lambda diag: bool(diag == "M"))  # M being cancerous
-    # break into two dataframes malignant and benign
-    malig = kc.data[kc.data.outcome == True]
-    # print(malig.outcome)
-    benign = kc.data[kc.data.outcome == False]
+    #choose a column to sort the data by, this makes it easier to pick initial centroil positions
+    kc.data.sort_values( by=['area'], inplace=True)
+
+    # break into two dataframes malignant and benign (for plotting)
+    #malig = kc.data[kc.data.outcome == True]
+    #benign = kc.data[kc.data.outcome == False]
     #try to see some correlations
     #kc.plot_raw_data(malig, benign)
-    kc.cluster('rad', 'compact')
+
+    #cluster should return a metric like the inertia
+    # then put in a for loop to K=1 -> N
+    for K in range(2,10,1):
+        kc.cluster('rad', 'compact', K)
 
